@@ -65,9 +65,21 @@ def get_summary():
     }
 
 
+
 @app.get("/api/decisions")
 def get_decisions(limit: int = 50):
     entries = read_decisions()
     limit = max(1, min(limit, 200))
 
-    return list(reversed(entries[-limit:]))
+    recent_entries = list(reversed(entries[-limit:]))
+
+    # Normalize older audit entries for dashboard compatibility.
+    for entry in recent_entries:
+        entry.setdefault("reason_code", "GENERAL")
+        entry.setdefault("sources", [])
+
+        if not isinstance(entry["sources"], list):
+            entry["sources"] = []
+
+    return recent_entries
+
