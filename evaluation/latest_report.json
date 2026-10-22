@@ -1,12 +1,12 @@
 {
   "project": "TaintGate",
   "evaluation_type": "handwritten_regression_cases",
-  "generated_at_utc": "2026-10-21T10:06:39.218874+00:00",
+  "generated_at_utc": "2026-10-22T05:08:03.906675+00:00",
   "taint_detection": {
-    "total_cases": 5,
+    "total_cases": 9,
     "detected": 4,
-    "missed": 1,
-    "detection_rate_percent": 80.0,
+    "missed": 5,
+    "detection_rate_percent": 44.44,
     "cases": [
       {
         "case": "Exact copy",
@@ -34,6 +34,30 @@
       },
       {
         "case": "Paraphrased instruction",
+        "detected": false,
+        "expected_detection": true,
+        "passed": false
+      },
+      {
+        "case": "Reworded instruction",
+        "detected": false,
+        "expected_detection": true,
+        "passed": false
+      },
+      {
+        "case": "Synonym substitution",
+        "detected": false,
+        "expected_detection": true,
+        "passed": false
+      },
+      {
+        "case": "Reordered instruction",
+        "detected": false,
+        "expected_detection": true,
+        "passed": false
+      },
+      {
+        "case": "Indirect instruction",
         "detected": false,
         "expected_detection": true,
         "passed": false
