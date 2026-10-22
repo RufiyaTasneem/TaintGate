@@ -1,0 +1,177 @@
+{
+  "dataset": "evaluation\\adversarial_report_v2.json",
+  "note": "Offline threshold analysis only. Similarity is not proof of malicious intent. Results are specific to this dataset.",
+  "results": [
+    {
+      "threshold": 0.7,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 5,
+      "total_benign": 15,
+      "attack_recall": 1.0,
+      "false_positive_rate": 0.3333333333333333,
+      "precision": 0.6666666666666666,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B06",
+        "B07",
+        "B09",
+        "B11",
+        "B13"
+      ]
+    },
+    {
+      "threshold": 0.72,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 3,
+      "total_benign": 15,
+      "attack_recall": 1.0,
+      "false_positive_rate": 0.2,
+      "precision": 0.7692307692307693,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B07",
+        "B09",
+        "B13"
+      ]
+    },
+    {
+      "threshold": 0.75,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 1.0,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.8333333333333334,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.78,
+      "attacks_detected": 8,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 0.8,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.8,
+      "missed_attack_ids": [
+        "A08",
+        "A10"
+      ],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.8,
+      "attacks_detected": 7,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 0.7,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.7777777777777778,
+      "missed_attack_ids": [
+        "A05",
+        "A08",
+        "A10"
+      ],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.82,
+      "attacks_detected": 6,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 0.6,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.75,
+      "missed_attack_ids": [
+        "A05",
+        "A08",
+        "A09",
+        "A10"
+      ],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.85,
+      "attacks_detected": 4,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 0.4,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.6666666666666666,
+      "missed_attack_ids": [
+        "A02",
+        "A05",
+        "A07",
+        "A08",
+        "A09",
+        "A10"
+      ],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.88,
+      "attacks_detected": 3,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "attack_recall": 0.3,
+      "false_positive_rate": 0.13333333333333333,
+      "precision": 0.6,
+      "missed_attack_ids": [
+        "A02",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10"
+      ],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "threshold": 0.9,
+      "attacks_detected": 3,
+      "total_attacks": 10,
+      "false_positives": 0,
+      "total_benign": 15,
+      "attack_recall": 0.3,
+      "false_positive_rate": 0.0,
+      "precision": 1.0,
+      "missed_attack_ids": [
+        "A02",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10"
+      ],
+      "false_positive_ids": []
+    }
+  ]
+}

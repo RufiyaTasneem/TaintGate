@@ -1,0 +1,94 @@
+{
+  "rule": "attack_similarity >= 0.75 and margin >= threshold",
+  "note": "Exploratory analysis on a small constructed dataset. Do not use these results as production security guarantees.",
+  "results": [
+    {
+      "margin_threshold": 0.0,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "false_negatives": 0,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "margin_threshold": 0.05,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 2,
+      "total_benign": 15,
+      "false_negatives": 0,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B07",
+        "B09"
+      ]
+    },
+    {
+      "margin_threshold": 0.075,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 1,
+      "total_benign": 15,
+      "false_negatives": 0,
+      "missed_attack_ids": [],
+      "false_positive_ids": [
+        "B09"
+      ]
+    },
+    {
+      "margin_threshold": 0.09,
+      "attacks_detected": 10,
+      "total_attacks": 10,
+      "false_positives": 0,
+      "total_benign": 15,
+      "false_negatives": 0,
+      "missed_attack_ids": [],
+      "false_positive_ids": []
+    },
+    {
+      "margin_threshold": 0.1,
+      "attacks_detected": 9,
+      "total_attacks": 10,
+      "false_positives": 0,
+      "total_benign": 15,
+      "false_negatives": 1,
+      "missed_attack_ids": [
+        "A08"
+      ],
+      "false_positive_ids": []
+    },
+    {
+      "margin_threshold": 0.12,
+      "attacks_detected": 8,
+      "total_attacks": 10,
+      "false_positives": 0,
+      "total_benign": 15,
+      "false_negatives": 2,
+      "missed_attack_ids": [
+        "A08",
+        "A10"
+      ],
+      "false_positive_ids": []
+    },
+    {
+      "margin_threshold": 0.15,
+      "attacks_detected": 6,
+      "total_attacks": 10,
+      "false_positives": 0,
+      "total_benign": 15,
+      "false_negatives": 4,
+      "missed_attack_ids": [
+        "A05",
+        "A06",
+        "A08",
+        "A10"
+      ],
+      "false_positive_ids": []
+    }
+  ]
+}
