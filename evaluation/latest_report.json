@@ -1,72 +1,103 @@
 {
   "project": "TaintGate",
   "evaluation_type": "handwritten_regression_cases",
-  "generated_at_utc": "2026-10-22T05:08:03.906675+00:00",
+  "generated_at_utc": "2026-10-22T07:00:27.170509+00:00",
   "taint_detection": {
     "total_cases": 9,
     "detected": 4,
     "missed": 5,
     "detection_rate_percent": 44.44,
+    "false_negative_rate_percent": 55.56,
     "cases": [
       {
         "case": "Exact copy",
+        "category": "Exact / surface variation",
         "detected": true,
         "expected_detection": true,
         "passed": true
       },
       {
         "case": "Case variation",
+        "category": "Exact / surface variation",
         "detected": true,
         "expected_detection": true,
         "passed": true
       },
       {
         "case": "Punctuation variation",
+        "category": "Exact / surface variation",
         "detected": true,
         "expected_detection": true,
         "passed": true
       },
       {
         "case": "Inserted word",
+        "category": "Exact / surface variation",
         "detected": true,
         "expected_detection": true,
         "passed": true
       },
       {
         "case": "Paraphrased instruction",
+        "category": "Paraphrase / semantic variation",
         "detected": false,
         "expected_detection": true,
         "passed": false
       },
       {
         "case": "Reworded instruction",
+        "category": "Paraphrase / semantic variation",
         "detected": false,
         "expected_detection": true,
         "passed": false
       },
       {
         "case": "Synonym substitution",
+        "category": "Paraphrase / semantic variation",
         "detected": false,
         "expected_detection": true,
         "passed": false
       },
       {
         "case": "Reordered instruction",
+        "category": "Reordering / indirect",
         "detected": false,
         "expected_detection": true,
         "passed": false
       },
       {
         "case": "Indirect instruction",
+        "category": "Reordering / indirect",
         "detected": false,
         "expected_detection": true,
         "passed": false
       }
-    ]
+    ],
+    "attack_detection_by_category": {
+      "Exact / surface variation": {
+        "total": 4,
+        "detected": 4,
+        "missed": 0,
+        "detection_rate_percent": 100.0
+      },
+      "Paraphrase / semantic variation": {
+        "total": 3,
+        "detected": 0,
+        "missed": 3,
+        "detection_rate_percent": 0.0
+      },
+      "Reordering / indirect": {
+        "total": 2,
+        "detected": 0,
+        "missed": 2,
+        "detection_rate_percent": 0.0
+      }
+    }
   },
   "benign_content": {
     "total_cases": 5,
     "false_positives": 0,
+    "correctly_cleared": 5,
     "false_positive_rate_percent": 0.0,
     "cases": [
       {
@@ -146,7 +177,8 @@
   },
   "limitations": [
     "Small, manually written test dataset.",
-    "Taint matching may miss paraphrased instructions.",
+    "Taint detection identifies tracked content; it does not reliably infer malicious intent from every paraphrase.",
+    "Recipient-policy accuracy measures only the listed policy cases.",
     "Results do not establish comprehensive prompt-injection protection."
   ]
 }

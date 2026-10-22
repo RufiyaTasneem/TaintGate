@@ -1,7 +1,13 @@
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from gateway.policy import check_email_policy
 from gateway.taint import (
@@ -10,8 +16,14 @@ from gateway.taint import (
     register_untrusted,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REPORT_PATH = PROJECT_ROOT / "evaluation" / "latest_report.json"
+
+
+def percentage(numerator, denominator):
+    """Return a percentage, or None when no cases exist."""
+    if denominator == 0:
+        return None
+    return round(numerator / denominator * 100, 2)
 
 
 def run_evaluation():
@@ -81,33 +93,69 @@ def run_evaluation():
         ("Security discussion", "We should review our security policies."),
         ("Ordinary recipient", "Please contact teammate@example.com."),
     ]
-
+    attack_categories = {
+        "Exact copy": "Exact / surface variation",
+        "Case variation": "Exact / surface variation",
+        "Punctuation variation": "Exact / surface variation",
+        "Inserted word": "Exact / surface variation",
+        "Paraphrased instruction": "Paraphrase / semantic variation",
+        "Reworded instruction": "Paraphrase / semantic variation",
+        "Synonym substitution": "Paraphrase / semantic variation",
+        "Reordered instruction": "Reordering / indirect",
+        "Indirect instruction": "Reordering / indirect",
+    }
     attack_results = []
     for name, text in attack_cases:
         detected = bool(find_tainted_sources(text))
         attack_results.append({
             "case": name,
+            "category": attack_categories.get(name, "Uncategorized"),
             "detected": detected,
             "expected_detection": True,
             "passed": detected,
         })
-
     benign_results = []
     for name, text in benign_cases:
-        detected = bool(find_tainted_sources(text))
+        flagged = bool(find_tainted_sources(text))
         benign_results.append({
             "case": name,
-            "flagged": detected,
+            "flagged": flagged,
             "expected_flagged": False,
-            "passed": not detected,
+            "passed": not flagged,
         })
-
+    total_attacks = len(attack_results)
     detected_attacks = sum(item["detected"] for item in attack_results)
-    missed_attacks = len(attack_results) - detected_attacks
-    false_positives = sum(item["flagged"] for item in benign_results)
+    missed_attacks = total_attacks - detected_attacks
+    category_summary = {}
+    for item in attack_results:
+        category = item["category"]
+        if category not in category_summary:
+            category_summary[category] = {
+                "total": 0,
+                "detected": 0,
+                "missed": 0,
+            }
+        category_summary[category]["total"] += 1
 
-    detection_rate = detected_attacks / len(attack_results) * 100
-    false_positive_rate = false_positives / len(benign_results) * 100
+        if item["detected"]:
+            category_summary[category]["detected"] += 1
+        else:
+            category_summary[category]["missed"] += 1
+
+    for metrics in category_summary.values():
+        metrics["detection_rate_percent"] = round(
+            metrics["detected"] / metrics["total"] * 100, 2
+        )
+
+
+    total_benign = len(benign_results)
+    false_positives = sum(item["flagged"] for item in benign_results)
+    correctly_cleared = total_benign - false_positives
+
+    # Treat attack cases as positive and benign cases as negative.
+    false_negative_rate = percentage(missed_attacks, total_attacks)
+    false_positive_rate = percentage(false_positives, total_benign)
+    detection_rate = percentage(detected_attacks, total_attacks)
 
     policy_cases = [
         ("Blocked attacker recipient", "attacker@example.com", False),
@@ -129,36 +177,42 @@ def run_evaluation():
         })
 
     policy_passed = sum(item["passed"] for item in policy_results)
+    policy_failed = len(policy_results) - policy_passed
 
     report = {
         "project": "TaintGate",
         "evaluation_type": "handwritten_regression_cases",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "taint_detection": {
-            "total_cases": len(attack_results),
+            "total_cases": total_attacks,
             "detected": detected_attacks,
             "missed": missed_attacks,
-            "detection_rate_percent": round(detection_rate, 2),
+            "detection_rate_percent": detection_rate,
+            "false_negative_rate_percent": false_negative_rate,
             "cases": attack_results,
+            "attack_detection_by_category": category_summary,
         },
         "benign_content": {
-            "total_cases": len(benign_results),
+            "total_cases": total_benign,
             "false_positives": false_positives,
-            "false_positive_rate_percent": round(false_positive_rate, 2),
+            "correctly_cleared": correctly_cleared,
+            "false_positive_rate_percent": false_positive_rate,
             "cases": benign_results,
         },
         "recipient_policy": {
             "total_cases": len(policy_results),
             "passed": policy_passed,
-            "failed": len(policy_results) - policy_passed,
-            "accuracy_percent": round(
-                policy_passed / len(policy_results) * 100, 2
+            "failed": policy_failed,
+            "accuracy_percent": percentage(
+                policy_passed, len(policy_results)
             ),
             "cases": policy_results,
         },
         "limitations": [
             "Small, manually written test dataset.",
-            "Taint matching may miss paraphrased instructions.",
+            "Taint detection identifies tracked content; it does not "
+            "reliably infer malicious intent from every paraphrase.",
+            "Recipient-policy accuracy measures only the listed policy cases.",
             "Results do not establish comprehensive prompt-injection protection.",
         ],
     }
@@ -172,17 +226,20 @@ def run_evaluation():
     print("TAINTGATE SECURITY EVALUATION")
     print("=" * 36)
     print(
-        f"Taint detection: {detected_attacks}/{len(attack_results)} "
-        f"({detection_rate:.1f}%)"
+        f"Attack detection: {detected_attacks}/{total_attacks} "
+        f"({detection_rate if detection_rate is not None else 'N/A'}%)"
     )
     print(
-        f"False-positive rate: {false_positives}/{len(benign_results)} "
-        f"({false_positive_rate:.1f}%)"
+        f"False-negative rate: "
+        f"{false_negative_rate if false_negative_rate is not None else 'N/A'}%"
     )
-    print(f"Missed taint cases: {missed_attacks}")
+    print(
+        f"False-positive rate: {false_positives}/{total_benign} "
+        f"({false_positive_rate if false_positive_rate is not None else 'N/A'}%)"
+    )
     print(
         f"Recipient policy: {policy_passed}/{len(policy_results)} "
-        f"({policy_passed / len(policy_results) * 100:.1f}%)"
+        f"({percentage(policy_passed, len(policy_results))}%)"
     )
     print(f"\nJSON report saved to: {REPORT_PATH}")
 
