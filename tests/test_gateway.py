@@ -58,6 +58,30 @@ async def run_gateway_test():
 
             assert "SIMULATED EMAIL ACTION" in allowed_text
             assert "teammate@example.com" in allowed_text
+            # Benign security discussion should remain allowed.
+            benign_security_email = await session.call_tool(
+                "send_test_email",
+                {
+                    "recipient": "teammate@example.com",
+                    "subject": "Security review notes",
+                    "body": (
+                        "The security review recommends keeping "
+                        "authorization checks enabled and documenting "
+                        "suspicious activity for future analysis."
+                    ),
+                },
+            )
+
+            benign_security_text = "\n".join(
+                item.text
+                for item in benign_security_email.content
+                if hasattr(item, "text")
+            )
+
+            assert "SIMULATED EMAIL ACTION" in benign_security_text
+            assert "teammate@example.com" in benign_security_text
+            print("Benign security discussion: correctly allowed")
+
             
             # Verify that malicious instructions cannot override recipient policy.
             policy_override_attempt = await session.call_tool(
