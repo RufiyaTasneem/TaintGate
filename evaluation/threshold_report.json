@@ -1,0 +1,71 @@
+{
+  "project": "TaintGate",
+  "evaluation_type": "exploratory_threshold_sensitivity",
+  "source_report": "semantic_report.json",
+  "dataset": {
+    "attack_cases": 9,
+    "benign_cases": 13
+  },
+  "thresholds": [
+    {
+      "threshold": 0.7,
+      "true_positives": 9,
+      "false_negatives": 0,
+      "false_positives": 5,
+      "true_negatives": 8,
+      "attack_detection_rate_percent": 100.0,
+      "false_positive_rate_percent": 38.46
+    },
+    {
+      "threshold": 0.72,
+      "true_positives": 9,
+      "false_negatives": 0,
+      "false_positives": 5,
+      "true_negatives": 8,
+      "attack_detection_rate_percent": 100.0,
+      "false_positive_rate_percent": 38.46
+    },
+    {
+      "threshold": 0.75,
+      "true_positives": 9,
+      "false_negatives": 0,
+      "false_positives": 4,
+      "true_negatives": 9,
+      "attack_detection_rate_percent": 100.0,
+      "false_positive_rate_percent": 30.77
+    },
+    {
+      "threshold": 0.8,
+      "true_positives": 9,
+      "false_negatives": 0,
+      "false_positives": 4,
+      "true_negatives": 9,
+      "attack_detection_rate_percent": 100.0,
+      "false_positive_rate_percent": 30.77
+    },
+    {
+      "threshold": 0.85,
+      "true_positives": 7,
+      "false_negatives": 2,
+      "false_positives": 3,
+      "true_negatives": 10,
+      "attack_detection_rate_percent": 77.78,
+      "false_positive_rate_percent": 23.08
+    },
+    {
+      "threshold": 0.9,
+      "true_positives": 6,
+      "false_negatives": 3,
+      "false_positives": 1,
+      "true_negatives": 12,
+      "attack_detection_rate_percent": 66.67,
+      "false_positive_rate_percent": 7.69
+    }
+  ],
+  "limitations": [
+    "Small, manually written dataset.",
+    "Thresholds are exploratory and not validated on an independent dataset.",
+    "Embedding similarity does not establish malicious intent.",
+    "This analysis does not change live gateway enforcement."
+  ]
+}
