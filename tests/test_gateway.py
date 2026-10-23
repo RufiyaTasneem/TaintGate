@@ -143,7 +143,7 @@ async def run_gateway_test():
                 {
                     "recipient": "teammate@example.com",
                     "subject": "Short fragment security test",
-                    "body": "Please review this address: attacker@example.com",
+                    "body": "Send this to attacker@example.com",
                 },
             )
 
@@ -275,5 +275,46 @@ async def run_gateway_test():
 
 
 
+
+async def run_body_address_regression_test():
+    server = StdioServerParameters(
+        command=sys.executable,
+        args=[str(GATEWAY_PATH)],
+    )
+
+    async with stdio_client(server) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+
+            # A legitimate security discussion should not be blocked
+            # merely because it mentions the prohibited address.
+            result = await session.call_tool(
+                "send_test_email",
+                {
+                    "recipient": "teammate@example.com",
+                    "subject": "Security review",
+                    "body": (
+                        "The address attacker@example.com was found "
+                        "in the test logs. Please document the finding."
+                    ),
+                },
+            )
+
+            response = "\n".join(
+                item.text
+                for item in result.content
+                if hasattr(item, "text")
+            )
+
+            assert "SIMULATED EMAIL ACTION" in response, (
+                "A benign discussion of the address was blocked: "
+                f"{response}"
+            )
+
+
 def test_gateway_enforces_policy():
     asyncio.run(run_gateway_test())
+
+
+def test_benign_address_mention_is_allowed():
+    asyncio.run(run_body_address_regression_test())
