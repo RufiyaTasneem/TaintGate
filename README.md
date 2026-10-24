@@ -202,7 +202,7 @@ TaintGate includes multiple evaluation experiments. The results below are measur
 
 
 
-Dataset: 25 examples — 10 labeled attacks and 15 labeled benign.
+Dataset: 25 examples â€” 10 labeled attacks and 15 labeled benign.
 
 
 
@@ -260,9 +260,9 @@ A separate, manually constructed 20-example dataset was used to explore generali
 
 |---|---:|---:|
 
-| Semantic threshold ≥ 0.75 | 5/10 | 3/10 |
+| Semantic threshold â‰¥ 0.75 | 5/10 | 3/10 |
 
-| Threshold ≥ 0.75 and prototype margin ≥ 0.09 | 2/10 | 0/10 |
+| Threshold â‰¥ 0.75 and prototype margin â‰¥ 0.09 | 2/10 | 0/10 |
 
 
 
@@ -282,25 +282,25 @@ The prototype-margin rule reduced false positives in this holdout set but missed
 
 taintgate/
 
-├── gateway/       # Gateway, taint tracking, and policy logic
+â”œâ”€â”€ gateway/       # Gateway, taint tracking, and policy logic
 
-├── policies/      # Policy configuration
+â”œâ”€â”€ policies/      # Policy configuration
 
-├── manifests/     # Tool/source/sink manifests
+â”œâ”€â”€ manifests/     # Tool/source/sink manifests
 
-├── rag/           # Local retrieval-augmented generation components
+â”œâ”€â”€ rag/           # Local retrieval-augmented generation components
 
-├── dashboard-ui/  # React audit dashboard
+â”œâ”€â”€ dashboard-ui/  # React audit dashboard
 
-├── logs/          # Local audit logs
+â”œâ”€â”€ logs/          # Local audit logs
 
-├── docs/          # Project documentation
+â”œâ”€â”€ docs/          # Project documentation
 
-├── eval/          # Earlier evaluation assets
+â”œâ”€â”€ eval/          # Earlier evaluation assets
 
-├── evaluation/    # Datasets, evaluation scripts, and JSON reports
+â”œâ”€â”€ evaluation/    # Datasets, evaluation scripts, and JSON reports
 
-└── tests/         # Automated regression tests
+â””â”€â”€ tests/         # Automated regression tests
 
 ```
 
@@ -511,6 +511,3 @@ The evaluation results are exploratory. The project does not claim to eliminate 
 
 
 \*Built to explore practical, testable defenses for tool-using AI systems.\*
-
-
-

@@ -380,3 +380,35 @@ async def run_risky_address_variations_test():
 
 def test_risky_address_variations_are_blocked():
     asyncio.run(run_risky_address_variations_test())
+async def run_blocked_recipient_harmless_body_test():
+    server = StdioServerParameters(
+        command=sys.executable,
+        args=[str(GATEWAY_PATH)],
+    )
+
+    async with stdio_client(server) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+
+            result = await session.call_tool(
+                "send_test_email",
+                {
+                    "recipient": "attacker@example.com",
+                    "subject": "Routine update",
+                    "body": "Hello, this is a routine project update.",
+                },
+            )
+
+            response = "\n".join(
+                item.text
+                for item in result.content
+                if hasattr(item, "text")
+            )
+
+            assert "BLOCKED by TaintGate" in response, (
+                f"Blocked recipient was allowed with a harmless body: {response}"
+            )
+
+
+def test_blocked_recipient_with_harmless_body_is_denied():
+    asyncio.run(run_blocked_recipient_harmless_body_test())

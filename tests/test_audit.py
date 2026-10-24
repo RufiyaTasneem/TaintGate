@@ -79,3 +79,32 @@ def test_allowed_decision_has_empty_sources(
     assert entry["decision"] == "ALLOWED"
     assert entry["reason_code"] == "POLICY_PASSED"
     assert entry["sources"] == []
+def test_database_failure_preserves_jsonl_audit(
+    tmp_path, monkeypatch, caplog
+):
+    import logging
+
+    log_file = tmp_path / "decisions.jsonl"
+    monkeypatch.setattr(audit, "LOG_FILE", log_file)
+    monkeypatch.setenv(
+        "TAINTGATE_DATABASE_URL",
+        "postgresql://invalid:invalid@127.0.0.1:1/taintgate",
+    )
+
+    with caplog.at_level(logging.ERROR, logger="gateway.audit"):
+        audit.log_decision(
+            tool_name="send_test_email",
+            decision="BLOCKED",
+            reason="Recipient policy violation.",
+            reason_code="RECIPIENT_POLICY",
+            sources=[],
+        )
+
+    entries = log_file.read_text(encoding="utf-8").splitlines()
+    assert len(entries) == 1
+
+    entry = json.loads(entries[0])
+    assert entry["decision"] == "BLOCKED"
+    assert entry["reason_code"] == "RECIPIENT_POLICY"
+
+    assert "PostgreSQL audit write failed" in caplog.text

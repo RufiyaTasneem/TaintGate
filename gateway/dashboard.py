@@ -1,20 +1,32 @@
 
 from collections import Counter
 import json
+import logging
+import os
 from pathlib import Path
-from fastapi.middleware.cors import CORSMiddleware
+
+import psycopg
+from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from psycopg.rows import dict_row
+
+
+load_dotenv()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="TaintGate Security Dashboard",
     description="Local security decision monitoring API",
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
 LOG_FILE = (
     Path(__file__).resolve().parent.parent
     / "logs"
@@ -22,8 +34,8 @@ LOG_FILE = (
 )
 
 
-def read_decisions() -> list[dict]:
-    """Read valid audit entries from the JSONL log."""
+def read_decisions_from_jsonl() -> list[dict]:
+    """Read valid audit entries from the local JSONL log."""
     if not LOG_FILE.exists():
         return []
 
@@ -39,6 +51,52 @@ def read_decisions() -> list[dict]:
                 continue
 
     return entries
+
+
+def read_decisions_from_db() -> list[dict]:
+    """Read audit entries from PostgreSQL."""
+    database_url = os.getenv("TAINTGATE_DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("Database URL is not configured.")
+
+    with psycopg.connect(database_url, row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT timestamp, tool, decision, reason_code, reason, sources
+                FROM audit_decisions
+                ORDER BY id ASC
+                """
+            )
+            rows = cursor.fetchall()
+
+    entries = []
+    for row in rows:
+        entry = dict(row)
+
+        # Match the JSONL API format.
+        if entry["timestamp"] is not None:
+            entry["timestamp"] = entry["timestamp"].isoformat()
+
+        if not isinstance(entry["sources"], list):
+            entry["sources"] = []
+
+        entries.append(entry)
+
+    return entries
+
+
+def read_decisions() -> list[dict]:
+    """Prefer PostgreSQL; fall back to JSONL if unavailable."""
+    if os.getenv("TAINTGATE_DATABASE_URL"):
+        try:
+            return read_decisions_from_db()
+        except Exception:
+            logger.exception(
+                "Dashboard database read failed; falling back to JSONL."
+            )
+
+    return read_decisions_from_jsonl()
 
 
 @app.get("/")
@@ -65,7 +123,6 @@ def get_summary():
     }
 
 
-
 @app.get("/api/decisions")
 def get_decisions(limit: int = 50):
     entries = read_decisions()
@@ -82,4 +139,3 @@ def get_decisions(limit: int = 50):
             entry["sources"] = []
 
     return recent_entries
-
