@@ -47,7 +47,7 @@ def log_decision(
         return
 
     try:
-        with psycopg.connect(database_url) as connection:
+        with psycopg.connect(database_url, connect_timeout=3) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
