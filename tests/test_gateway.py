@@ -41,6 +41,7 @@ async def run_gateway_test():
             )
 
             assert "BLOCKED by TaintGate" in blocked_text
+            assert "SIMULATED EMAIL ACTION" not in blocked_text
 
             # 2. A permitted recipient with harmless content is allowed.
             allowed = await session.call_tool(
@@ -155,6 +156,7 @@ async def run_gateway_test():
             )
 
             assert "BLOCKED by TaintGate" in short_fragment_text
+            assert "SIMULATED EMAIL ACTION" not in short_fragment_text
             print("Short-fragment security check: blocked")
 
             # 8. Read a second document containing the suspicious line.

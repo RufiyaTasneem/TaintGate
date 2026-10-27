@@ -79,26 +79,35 @@ def test_allowed_decision_has_empty_sources(
     assert entry["decision"] == "ALLOWED"
     assert entry["reason_code"] == "POLICY_PASSED"
     assert entry["sources"] == []
+
 def test_database_failure_preserves_jsonl_audit(
     tmp_path, monkeypatch, caplog
 ):
     import logging
+    from unittest.mock import patch
 
     log_file = tmp_path / "decisions.jsonl"
     monkeypatch.setattr(audit, "LOG_FILE", log_file)
     monkeypatch.setenv(
         "TAINTGATE_DATABASE_URL",
-        "postgresql://invalid:invalid@127.0.0.1:1/taintgate",
+        "postgresql://test/test",
     )
 
-    with caplog.at_level(logging.ERROR, logger="gateway.audit"):
-        audit.log_decision(
-            tool_name="send_test_email",
-            decision="BLOCKED",
-            reason="Recipient policy violation.",
-            reason_code="RECIPIENT_POLICY",
-            sources=[],
-        )
+    with patch.object(
+        audit.psycopg,
+        "connect",
+        side_effect=OSError("Simulated database failure"),
+    ):
+        with caplog.at_level(
+            logging.ERROR, logger="gateway.audit"
+        ):
+            audit.log_decision(
+                tool_name="send_test_email",
+                decision="BLOCKED",
+                reason="Recipient policy violation.",
+                reason_code="RECIPIENT_POLICY",
+                sources=[],
+            )
 
     entries = log_file.read_text(encoding="utf-8").splitlines()
     assert len(entries) == 1
@@ -108,3 +117,31 @@ def test_database_failure_preserves_jsonl_audit(
     assert entry["reason_code"] == "RECIPIENT_POLICY"
 
     assert "PostgreSQL audit write failed" in caplog.text
+    assert "Simulated database failure" in caplog.text
+
+
+def test_jsonl_failure_propagates(tmp_path, monkeypatch):
+    from unittest.mock import patch
+
+    log_file = tmp_path / "decisions.jsonl"
+    monkeypatch.setattr(audit, "LOG_FILE", log_file)
+    monkeypatch.delenv("TAINTGATE_DATABASE_URL", raising=False)
+
+    with patch.object(
+        audit.Path,
+        "open",
+        side_effect=OSError("Simulated disk failure"),
+    ):
+        try:
+            audit.log_decision(
+                tool_name="send_test_email",
+                decision="BLOCKED",
+                reason="Recipient policy violation.",
+                reason_code="RECIPIENT_POLICY",
+            )
+        except OSError as exc:
+            assert "Simulated disk failure" in str(exc)
+        else:
+            raise AssertionError(
+                "Expected the JSONL write failure to propagate"
+            )

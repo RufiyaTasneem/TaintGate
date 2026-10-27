@@ -13,7 +13,7 @@ class TaintedData:
     sources: list[str] = field(default_factory=list)
 
 
-# Keys preserve the original text for compatibility with existing tests.
+# Keys preserve original text for compatibility with existing tests.
 TAINTED_VALUES: dict[str, TaintedData] = {}
 
 
@@ -45,7 +45,11 @@ def _add_record(value: str, source: str) -> TaintedData:
 def register_untrusted(value: str, source: str) -> TaintedData:
     """Register untrusted content and each non-empty original line."""
     if not normalize(value):
-        return TaintedData(value=value, source=source, sources=[source])
+        return TaintedData(
+            value=value,
+            source=source,
+            sources=[source],
+        )
 
     record = _add_record(value, source)
 
@@ -57,7 +61,7 @@ def register_untrusted(value: str, source: str) -> TaintedData:
 
 
 def find_tainted_sources(candidate: str) -> list[TaintedData]:
-    """Find provenance using normalized content and five-word overlap."""
+    """Find provenance using normalized phrases and five-word overlap."""
     candidate_normalized = normalize(candidate)
 
     if not candidate_normalized:
@@ -72,14 +76,14 @@ def find_tainted_sources(candidate: str) -> list[TaintedData]:
         if not key:
             continue
 
-        # Exact normalized content or a registered phrase within candidate.
-        if key in candidate_normalized:
+        # Match complete words or phrases, not substrings within words.
+        if f" {key} " in f" {candidate_normalized} ":
             matches[record.taint_id] = record
             continue
 
         key_words = key.split()
 
-        # Only substantial partial copies match; short fragments alone do not.
+        # Detect substantial partial copies using five-word overlap.
         if len(candidate_words) < 5 or len(key_words) < 5:
             continue
 

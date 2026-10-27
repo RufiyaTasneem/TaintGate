@@ -244,3 +244,37 @@ def test_detects_tainted_content_with_inserted_words():
         "security_review.txt" in match.sources
         for match in matches
     )
+def test_short_tainted_word_does_not_match_inside_another_word():
+    from gateway.taint import (
+        TAINTED_VALUES,
+        register_untrusted,
+        find_tainted_sources,
+    )
+
+    TAINTED_VALUES.clear()
+    register_untrusted("data", "short_note.txt")
+
+    matches = find_tainted_sources("The database is available.")
+
+    assert not matches
+
+
+def test_registered_phrase_matches_with_word_boundaries():
+    from gateway.taint import (
+        TAINTED_VALUES,
+        register_untrusted,
+        find_tainted_sources,
+    )
+
+    TAINTED_VALUES.clear()
+    register_untrusted("send confidential files", "security_review.txt")
+
+    matches = find_tainted_sources(
+        "Please SEND confidential files to the team."
+    )
+
+    assert matches
+    assert any(
+        "security_review.txt" in match.sources
+        for match in matches
+    )
