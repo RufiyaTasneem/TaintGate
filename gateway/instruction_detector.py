@@ -32,6 +32,22 @@ WARNING_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+QUOTED_EXAMPLE_REJECTION_PATTERN = re.compile(
+    r"""(?is)
+    \b(?:contains?|shows?|includes?|quotes?|describes?)\b
+    .{0,100}?
+    ["“]
+    \s*(?:send|forward|email|deliver|transmit|share|transfer|upload|disclose)
+    \b
+    [^"”]{0,200}
+    ["”]
+    .{0,80}?
+    \b(?:do\s+not|don't|never|must\s+not|should\s+not)
+    \s+(?:execute|follow|perform|carry\s+out|obey)\b
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
 
 def contains_risky_instruction(body: str) -> bool:
     """Detect likely risky transfers to a prohibited address."""
@@ -43,7 +59,10 @@ def contains_risky_instruction(body: str) -> bool:
     if not ADDRESS_PATTERN.search(normalized):
         return False
 
-    # Keep email-address periods intact; split independent clauses.
+    # Exempt only a quoted example that is explicitly rejected.
+    if QUOTED_EXAMPLE_REJECTION_PATTERN.search(body):
+        return False
+
     clauses = re.split(r"[;!?\n]+", normalized)
 
     for clause in clauses:

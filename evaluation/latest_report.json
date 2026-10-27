@@ -1,7 +1,7 @@
 {
   "project": "TaintGate",
   "evaluation_type": "handwritten_regression_cases",
-  "generated_at_utc": "2026-10-25T07:30:23.876911+00:00",
+  "generated_at_utc": "2026-10-27T05:26:09.816756+00:00",
   "instruction_detection": {
     "total_cases": 9,
     "detected": 9,
