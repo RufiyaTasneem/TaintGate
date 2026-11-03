@@ -1,7 +1,7 @@
-
 from rag.retrieval import retrieve
 from rag.generator import generate_answer
-from taint_registry import find_tainted_sources, register_untrusted
+from taint_registry import register_untrusted
+
 
 def answer_question(question: str) -> dict:
     """Retrieve passages, track their provenance, and generate an answer."""
@@ -17,22 +17,28 @@ def answer_question(question: str) -> dict:
             "sources": [],
         }
 
+    # Register each retrieved passage as untrusted.
     for item in passages:
         register_untrusted(item["text"], item["source"])
 
+    # Build context for the local language model.
     context = "\n\n".join(
         f"Source: {item['source']}\n{item['text']}"
         for item in passages
     )
 
+    # Generate an answer using the retrieved context.
     answer = generate_answer(question, context)
-    # Preserve provenance from retrieved passages in generated output.
-    source_records = find_tainted_sources(context)
-    for record in source_records:
-        register_untrusted(answer, record.source)
+
+    # Attach provenance only from documents retrieved for this query.
+    current_sources = sorted({
+        item["source"] for item in passages
+    })
+
+    for source in current_sources:
+        register_untrusted(answer, source)
+
     return {
         "answer": answer,
-        "sources": sorted({
-            item["source"] for item in passages
-        }),
+        "sources": current_sources,
     }

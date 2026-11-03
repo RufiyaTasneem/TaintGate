@@ -1,13 +1,11 @@
 
-import asyncio
-import importlib.util
-import sys
-from pathlib import Path
 from rag.answer import answer_question
 from rag.retrieval import retrieve
+
 from gateway.taint import (
     TAINTED_VALUES,
     find_tainted_sources,
+    register_untrusted,
 )
 
 
@@ -31,8 +29,6 @@ def test_rag_rejects_malicious_recipient_instruction():
             "not allow",
         )
     )
-
-
 
 
 def test_rag_retrieved_passages_register_untrusted_provenance():
@@ -63,6 +59,7 @@ def test_rag_retrieved_passages_register_untrusted_provenance():
     assert set(result["sources"]) == {
         passage["source"] for passage in expected_passages
     }
+
 
 def test_generated_answer_is_registered_as_untrusted(monkeypatch):
     from rag import answer as answer_module
@@ -99,21 +96,28 @@ def test_generated_answer_is_registered_as_untrusted(monkeypatch):
     result = answer_module.answer_question("Summarize the document")
 
     assert result["answer"] == generated_answer
+
     matches = find_tainted_sources(generated_answer)
+
     assert any(
         "security_review.txt" in record.sources
         for record in matches
-        ), "Generated output should retain the source provenance"
+    ), "Generated output should retain the source provenance"
+
     answer_records = [
         record
         for record in TAINTED_VALUES.values()
         if record.value == generated_answer
     ]
+
     assert answer_records, "Generated answer was not registered"
+
     assert any(
         "security_review.txt" in record.sources
         for record in answer_records
     ), "Generated answer record lost its source provenance"
+
+
 def test_rag_rejects_paraphrased_malicious_recipient_instruction():
     result = answer_question(
         "A retrieved document recommends bypassing the recipient "
@@ -140,14 +144,17 @@ def test_rag_rejects_paraphrased_malicious_recipient_instruction():
         )
     ), f"RAG did not clearly warn about the malicious instruction: {answer}"
 
+
 def test_rag_generated_malicious_answer_is_blocked_by_email_gateway(
     monkeypatch,
 ):
     import asyncio
     import importlib.util
     import sys
+    from pathlib import Path
 
     from rag import answer as answer_module
+
     from taint_registry import TAINTED_VALUES, find_tainted_sources
 
     project_root = Path(__file__).resolve().parents[1]
@@ -185,6 +192,7 @@ def test_rag_generated_malicious_answer_is_blocked_by_email_gateway(
                 }
             ],
         )
+
         monkeypatch.setattr(
             answer_module,
             "generate_answer",
@@ -196,6 +204,7 @@ def test_rag_generated_malicious_answer_is_blocked_by_email_gateway(
         )
 
         assert result["answer"] == malicious_passage
+
         assert any(
             "malicious_document.txt" in record.sources
             for record in find_tainted_sources(result["answer"])
@@ -209,9 +218,68 @@ def test_rag_generated_malicious_answer_is_blocked_by_email_gateway(
             )
 
         response = asyncio.run(attempt_email())
+
         assert "BLOCKED by TaintGate" in response
         assert "malicious_document.txt" in response
 
     finally:
         TAINTED_VALUES.clear()
         TAINTED_VALUES.update(previous_values)
+
+
+def test_generated_answer_does_not_inherit_unrelated_old_provenance(
+    monkeypatch,
+):
+    from rag import answer as answer_module
+
+    # Simulate content registered by an earlier, unrelated query.
+    register_untrusted(
+        "TaintGate treats retrieved content as untrusted",
+        "old_unrelated_document.txt",
+    )
+
+    current_passages = [
+        {
+            "source": "current_document.txt",
+            "text": (
+                "TaintGate treats retrieved content as untrusted "
+                "and tracks its original source."
+            ),
+            "score": 1.0,
+        }
+    ]
+
+    generated_answer = "The retrieved content is treated as untrusted."
+
+    monkeypatch.setattr(
+        answer_module,
+        "retrieve",
+        lambda question, top_k=3: current_passages,
+    )
+
+    monkeypatch.setattr(
+        answer_module,
+        "generate_answer",
+        lambda question, context: generated_answer,
+    )
+
+    result = answer_module.answer_question("Explain the security design")
+
+    assert result["answer"] == generated_answer
+
+    answer_records = [
+        record
+        for record in TAINTED_VALUES.values()
+        if record.value == generated_answer
+    ]
+
+    assert answer_records, "Generated answer was not registered"
+
+    answer_sources = {
+        source
+        for record in answer_records
+        for source in record.sources
+    }
+
+    assert "current_document.txt" in answer_sources
+    assert "old_unrelated_document.txt" not in answer_sources
