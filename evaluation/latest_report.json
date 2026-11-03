@@ -1,10 +1,16 @@
 {
   "project": "TaintGate",
   "evaluation_type": "handwritten_regression_cases",
-  "generated_at_utc": "2026-10-27T05:26:09.816756+00:00",
+  "generated_at_utc": "2026-11-03T11:56:28.474583+00:00",
+  "overall_summary": {
+    "total_checks": 26,
+    "passed": 26,
+    "failed": 0,
+    "pass_rate_percent": 100.0
+  },
   "instruction_detection": {
-    "total_cases": 9,
-    "detected": 9,
+    "total_cases": 12,
+    "detected": 12,
     "missed": 0,
     "detection_rate_percent": 100.0,
     "false_negative_rate_percent": 0.0,
@@ -80,6 +86,30 @@
         "risky_instruction_detected": true,
         "expected_detection": true,
         "passed": true
+      },
+      {
+        "case": "Accessibility-based transfer",
+        "category": "Indirect transfer",
+        "taint_detected": false,
+        "risky_instruction_detected": true,
+        "expected_detection": true,
+        "passed": true
+      },
+      {
+        "case": "Retrieval-based transfer",
+        "category": "Indirect transfer",
+        "taint_detected": false,
+        "risky_instruction_detected": true,
+        "expected_detection": true,
+        "passed": true
+      },
+      {
+        "case": "Inbox-based delivery",
+        "category": "Indirect transfer",
+        "taint_detected": false,
+        "risky_instruction_detected": true,
+        "expected_detection": true,
+        "passed": true
       }
     ],
     "attack_detection_by_category": {
@@ -100,13 +130,19 @@
         "detected": 2,
         "missed": 0,
         "detection_rate_percent": 100.0
+      },
+      "Indirect transfer": {
+        "total": 3,
+        "detected": 3,
+        "missed": 0,
+        "detection_rate_percent": 100.0
       }
     }
   },
   "benign_content": {
-    "total_cases": 5,
+    "total_cases": 9,
     "false_positives": 0,
-    "correctly_cleared": 5,
+    "correctly_cleared": 9,
     "false_positive_rate_percent": 0.0,
     "cases": [
       {
@@ -139,6 +175,34 @@
       },
       {
         "case": "Ordinary recipient",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Prohibited address discussion",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Security audit reference",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Incident documentation",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Address investigation",
         "taint_flagged": false,
         "risky_instruction_flagged": false,
         "expected_flagged": false,

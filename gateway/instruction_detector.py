@@ -1,4 +1,4 @@
-
+﻿
 import re
 
 
@@ -108,6 +108,29 @@ def contains_risky_instruction(body: str) -> bool:
 
             clause = remaining_clause
 
+        # Detect indirect transfers even without conventional
+        # action words such as send, forward, or upload.
+        indirect_match = re.search(
+            r"\b(?:make|keep|leave)\b.{0,100}"
+            r"\b(?:accessible|available)\b.{0,40}"
+            r"\b(?:at|to)\s+attacker@example\.com\b"
+            r"|\b(?:can\s+be\s+)?"
+            r"(?:retrieved|accessed|downloaded)\b"
+            r".{0,60}\bfrom\s+attacker@example\.com\b"
+            r"|\b(?:place|put|save|drop)\b.{0,100}"
+            r"\b(?:in|into|at)\s+"
+            r"attacker@example\.com\b",
+            clause,
+            re.IGNORECASE,
+        )
+
+        if indirect_match and SENSITIVE_PATTERN.search(clause):
+            prefix = clause[:indirect_match.start()]
+
+            if not DIRECT_NEGATION_PATTERN.search(prefix):
+                return True
+
+        # Detect conventional transfer actions.
         for action_match in ACTION_PATTERN.finditer(clause):
             prefix = clause[:action_match.start()]
 
