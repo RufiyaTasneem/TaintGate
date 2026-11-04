@@ -1,4 +1,4 @@
-
+﻿
 import asyncio
 import os
 import socket
@@ -65,16 +65,24 @@ async def run_cross_session_test():
         await wait_for_gateway(process)
 
         async with streamable_http_client(GATEWAY_URL) as (
-            read_a, write_a, _
+            read_a, write_a, get_session_id_a
         ):
             async with ClientSession(read_a, write_a) as session_a:
                 await session_a.initialize()
+                session_a_id = get_session_id_a()
+                assert session_a_id is not None
 
                 async with streamable_http_client(GATEWAY_URL) as (
-                    read_b, write_b, _
+                    read_b, write_b, get_session_id_b
                 ):
                     async with ClientSession(read_b, write_b) as session_b:
                         await session_b.initialize()
+                        session_b_id = get_session_id_b()
+                        assert session_b_id is not None
+                        assert session_a_id != session_b_id, (
+                            "Both MCP clients received the same session ID."
+                            )
+
 
                         # Session A reads the untrusted document.
                         await session_a.call_tool(
