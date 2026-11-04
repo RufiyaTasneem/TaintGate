@@ -252,6 +252,24 @@ async def run_gateway_test():
             tool_names = [tool.name for tool in tools.tools]
 
             assert "ask_security_question" in tool_names
+                        # Internal MCP context must not be exposed as a client argument.
+            for tool_name in (
+                "read_document",
+                "send_test_email",
+                "ask_security_question",
+            ):
+                tool = next(
+                    item for item in tools.tools
+                    if item.name == tool_name
+                )
+
+                properties = tool.inputSchema.get("properties", {})
+
+                assert "ctx" not in properties, (
+                    f"Internal context leaked into {tool_name} schema"
+                )
+
+            print("MCP context injection: hidden from client schemas")
             print("RAG tool: available through MCP")
 
             # 13. Ask a question using the local knowledge base.

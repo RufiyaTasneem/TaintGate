@@ -1,6 +1,8 @@
 
 from dataclasses import dataclass, field
 from uuid import uuid4
+from weakref import WeakKeyDictionary
+from threading import RLock
 import string
 
 
@@ -13,10 +15,6 @@ class TaintedData:
     sources: list[str] = field(default_factory=list)
 
 
-# Keys preserve original text for compatibility with existing tests.
-TAINTED_VALUES: dict[str, TaintedData] = {}
-
-
 def normalize(value: str) -> str:
     """Normalize case, punctuation, and whitespace for comparison."""
     value = value.lower()
@@ -24,84 +22,123 @@ def normalize(value: str) -> str:
     return " ".join(value.split())
 
 
-def _add_record(value: str, source: str) -> TaintedData:
-    """Store data under its original text and merge duplicate sources."""
-    existing = TAINTED_VALUES.get(value)
+class TaintRegistry:
+    """Stores untrusted data and provenance for one registry scope."""
 
-    if existing is not None:
-        if source not in existing.sources:
-            existing.sources.append(source)
-        return existing
+    def __init__(self, values=None):
+        self.values = values if values is not None else {}
+        self._lock = RLock()
 
-    record = TaintedData(
-        value=value,
-        source=source,
-        sources=[source],
-    )
-    TAINTED_VALUES[value] = record
-    return record
+    def _add_record(self, value: str, source: str) -> TaintedData:
+        existing = self.values.get(value)
 
+        if existing is not None:
+            if source not in existing.sources:
+                existing.sources.append(source)
+            return existing
 
-def register_untrusted(value: str, source: str) -> TaintedData:
-    """Register untrusted content and each non-empty original line."""
-    if not normalize(value):
-        return TaintedData(
+        record = TaintedData(
             value=value,
             source=source,
             sources=[source],
         )
+        self.values[value] = record
+        return record
 
-    record = _add_record(value, source)
+    def register_untrusted(self, value: str, source: str) -> TaintedData:
+        if not normalize(value):
+            return TaintedData(
+                value=value,
+                source=source,
+                sources=[source],
+            )
 
-    for line in value.splitlines():
-        if normalize(line):
-            _add_record(line, source)
+        with self._lock:
+            record = self._add_record(value, source)
 
-    return record
+            for line in value.splitlines():
+                if normalize(line):
+                    self._add_record(line, source)
+
+            return record
+
+    def find_tainted_sources(self, candidate: str) -> list[TaintedData]:
+        candidate_normalized = normalize(candidate)
+
+        if not candidate_normalized:
+            return []
+
+        candidate_words = candidate_normalized.split()
+        matches = {}
+
+        with self._lock:
+            for original, record in self.values.items():
+                key = normalize(original)
+
+                if not key:
+                    continue
+
+                if f" {key} " in f" {candidate_normalized} ":
+                    matches[record.taint_id] = record
+                    continue
+
+                key_words = key.split()
+
+                if len(candidate_words) < 5 or len(key_words) < 5:
+                    continue
+
+                candidate_windows = {
+                    " ".join(candidate_words[i:i + 5])
+                    for i in range(len(candidate_words) - 4)
+                }
+                key_windows = {
+                    " ".join(key_words[i:i + 5])
+                    for i in range(len(key_words) - 4)
+                }
+
+                if candidate_windows & key_windows:
+                    matches[record.taint_id] = record
+
+        return list(matches.values())
+
+    def contains_tainted_data(self, candidate: str) -> bool:
+        return bool(self.find_tainted_sources(candidate))
+
+
+# Backward-compatible global registry.
+# Existing tests and direct callers continue using this dictionary.
+TAINTED_VALUES: dict[str, TaintedData] = {}
+_global_registry = TaintRegistry(TAINTED_VALUES)
+
+# Runtime registries are isolated by MCP session.
+_session_registries = WeakKeyDictionary()
+_session_registries_lock = RLock()
+
+
+def get_global_registry() -> TaintRegistry:
+    return _global_registry
+
+
+def get_session_registry(session) -> TaintRegistry:
+    """Return the same isolated registry for repeated calls in one session."""
+    with _session_registries_lock:
+        registry = _session_registries.get(session)
+
+        if registry is None:
+            registry = TaintRegistry()
+            _session_registries[session] = registry
+
+        return registry
+
+
+# Backward-compatible global functions.
+def register_untrusted(value: str, source: str) -> TaintedData:
+    return _global_registry.register_untrusted(value, source)
 
 
 def find_tainted_sources(candidate: str) -> list[TaintedData]:
-    """Find provenance using normalized phrases and five-word overlap."""
-    candidate_normalized = normalize(candidate)
-
-    if not candidate_normalized:
-        return []
-
-    candidate_words = candidate_normalized.split()
-    matches: dict[str, TaintedData] = {}
-
-    for original, record in TAINTED_VALUES.items():
-        key = normalize(original)
-
-        if not key:
-            continue
-
-        # Match complete words or phrases, not substrings within words.
-        if f" {key} " in f" {candidate_normalized} ":
-            matches[record.taint_id] = record
-            continue
-
-        key_words = key.split()
-
-        # Detect substantial partial copies using five-word overlap.
-        if len(candidate_words) < 5 or len(key_words) < 5:
-            continue
-
-        candidate_windows = {
-            " ".join(candidate_words[i:i + 5])
-            for i in range(len(candidate_words) - 4)
-        }
-        key_windows = {
-            " ".join(key_words[i:i + 5])
-            for i in range(len(key_words) - 4)
-        }
-
-        if candidate_windows & key_windows:
-            matches[record.taint_id] = record
-
-    return list(matches.values())
+    return _global_registry.find_tainted_sources(candidate)
 
 
 def contains_tainted_data(candidate: str) -> bool:
-    """Return whether candidate matches registered untrusted content."""
-    return bool(find_tainted_sources(candidate))
+    return _global_registry.contains_tainted_data(candidate)

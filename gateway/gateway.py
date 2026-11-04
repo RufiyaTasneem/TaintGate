@@ -3,6 +3,8 @@ import asyncio
 from instruction_detector import contains_risky_instruction
 from pathlib import Path
 from typing import Any
+import os
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 GATEWAY_DIR = Path(__file__).resolve().parent
@@ -15,15 +17,27 @@ if str(GATEWAY_DIR) not in sys.path:
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 
 from audit import log_decision
 from policy import check_email_policy
-from taint import register_untrusted, find_tainted_sources
+from taint_registry import (
+    get_global_registry,
+    get_session_registry,
+)
 from rag.answer import answer_question
 
-mcp = FastMCP("TaintGate Gateway")
+mcp = FastMCP(
+    "TaintGate Gateway",
+    host="127.0.0.1",
+    port=8001,
+)
+def get_registry(ctx: Context | None):
+    """Select the registry for this MCP session."""
+    if ctx is None:
+        return get_global_registry()
 
+    return get_session_registry(ctx.session)
 MOCK_SERVER_PATH = Path(__file__).resolve().parent / "mock_server.py"
 
 
@@ -53,15 +67,16 @@ async def call_upstream(
 
 
 @mcp.tool()
-async def read_document(document_name: str) -> str:
-    """Read a document through the upstream MCP server."""
-
+async def read_document(
+    document_name: str,
+    ctx: Context | None = None,
+) -> str:
     content = await call_upstream(
         "read_document",
         {"document_name": document_name},
     )
 
-    register_untrusted(content, document_name)
+    get_registry(ctx).register_untrusted(content, document_name)
 
     log_decision(
         tool_name="read_document",
@@ -79,6 +94,7 @@ async def send_test_email(
     recipient: str,
     subject: str,
     body: str,
+    ctx: Context | None = None,
 ) -> str:
     """Simulate sending an email after security checks."""
     # 1. Check all email fields for content copied from untrusted documents.
@@ -92,7 +108,7 @@ async def send_test_email(
     matched_fields: list[str] = []
 
     for field_name, field_value in fields.items():
-        tainted_records = find_tainted_sources(field_value)
+        tainted_records = get_registry(ctx).find_tainted_sources(field_value)
 
         if tainted_records:
             matched_fields.append(field_name)
@@ -172,10 +188,17 @@ async def send_test_email(
 
 
 @mcp.tool()
-async def ask_security_question(question: str) -> str:
-    """Answer a security question using local RAG."""
+async def ask_security_question(
+    question: str,
+    ctx: Context | None = None,
+) -> str:
+    registry = get_registry(ctx)
 
-    result = await asyncio.to_thread(answer_question, question)
+    result = await asyncio.to_thread(
+        answer_question,
+        question,
+        registry=registry,
+    )
 
     answer = result["answer"]
     sources = result["sources"]
@@ -187,4 +210,5 @@ async def ask_security_question(question: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    transport = os.getenv("TAINTGATE_TRANSPORT", "stdio")
+    mcp.run(transport=transport)
