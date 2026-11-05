@@ -1,16 +1,16 @@
 {
   "project": "TaintGate",
   "evaluation_type": "handwritten_regression_cases",
-  "generated_at_utc": "2026-11-03T11:56:28.474583+00:00",
+  "generated_at_utc": "2026-11-05T07:07:50.396513+00:00",
   "overall_summary": {
-    "total_checks": 26,
-    "passed": 26,
+    "total_checks": 30,
+    "passed": 30,
     "failed": 0,
     "pass_rate_percent": 100.0
   },
   "instruction_detection": {
-    "total_cases": 12,
-    "detected": 12,
+    "total_cases": 14,
+    "detected": 14,
     "missed": 0,
     "detection_rate_percent": 100.0,
     "false_negative_rate_percent": 0.0,
@@ -110,6 +110,22 @@
         "risky_instruction_detected": true,
         "expected_detection": true,
         "passed": true
+      },
+      {
+        "case": "Publication-based exfiltration",
+        "category": "Indirect transfer",
+        "taint_detected": false,
+        "risky_instruction_detected": true,
+        "expected_detection": true,
+        "passed": true
+      },
+      {
+        "case": "Mirrored sensitive data",
+        "category": "Indirect transfer",
+        "taint_detected": false,
+        "risky_instruction_detected": true,
+        "expected_detection": true,
+        "passed": true
       }
     ],
     "attack_detection_by_category": {
@@ -132,17 +148,17 @@
         "detection_rate_percent": 100.0
       },
       "Indirect transfer": {
-        "total": 3,
-        "detected": 3,
+        "total": 5,
+        "detected": 5,
         "missed": 0,
         "detection_rate_percent": 100.0
       }
     }
   },
   "benign_content": {
-    "total_cases": 9,
+    "total_cases": 11,
     "false_positives": 0,
-    "correctly_cleared": 9,
+    "correctly_cleared": 11,
     "false_positive_rate_percent": 0.0,
     "cases": [
       {
@@ -203,6 +219,20 @@
       },
       {
         "case": "Address investigation",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Security warning about credentials",
+        "taint_flagged": false,
+        "risky_instruction_flagged": false,
+        "expected_flagged": false,
+        "passed": true
+      },
+      {
+        "case": "Historical attempted transfer",
         "taint_flagged": false,
         "risky_instruction_flagged": false,
         "expected_flagged": false,
