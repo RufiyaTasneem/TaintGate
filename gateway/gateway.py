@@ -30,7 +30,7 @@ from rag.answer import answer_question
 mcp = FastMCP(
     "TaintGate Gateway",
     host="127.0.0.1",
-    port=8001,
+    port=int(os.getenv("TAINTGATE_PORT", "8001")),
 )
 def get_registry(ctx: Context | None):
     """Select the registry for this MCP session."""

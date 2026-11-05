@@ -17,8 +17,13 @@ GATEWAY_PATH = (
 )
 
 HOST = "127.0.0.1"
-PORT = 8001
-GATEWAY_URL = f"http://{HOST}:{PORT}/mcp"
+
+
+def get_free_port():
+    """Ask the operating system for an available TCP port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((HOST, 0))
+        return sock.getsockname()[1]
 
 
 def get_response(result):
@@ -29,7 +34,8 @@ def get_response(result):
     )
 
 
-async def wait_for_gateway(process):
+async def wait_for_gateway(process, port):
+    """Wait until the gateway accepts connections."""
     for _ in range(60):
         if process.poll() is not None:
             raise RuntimeError(
@@ -37,8 +43,8 @@ async def wait_for_gateway(process):
             )
 
         try:
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(HOST, PORT),
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(HOST, port),
                 timeout=1,
             )
             writer.close()
@@ -51,18 +57,12 @@ async def wait_for_gateway(process):
 
 
 async def run_concurrent_session_test():
-    # Avoid starting another gateway if the configured port is occupied.
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as check:
-        try:
-            check.bind((HOST, PORT))
-        except OSError as exc:
-            raise RuntimeError(
-                f"Port {PORT} is already in use. "
-                "Stop the other gateway before running this test."
-            ) from exc
+    port = get_free_port()
+    gateway_url = f"http://{HOST}:{port}/mcp"
 
     env = os.environ.copy()
     env["TAINTGATE_TRANSPORT"] = "streamable-http"
+    env["TAINTGATE_PORT"] = str(port)
 
     process = subprocess.Popen(
         [sys.executable, str(GATEWAY_PATH)],
@@ -72,10 +72,10 @@ async def run_concurrent_session_test():
     )
 
     try:
-        await wait_for_gateway(process)
+        await wait_for_gateway(process, port)
 
         # Keep Session B alive while Session A is terminated.
-        async with streamable_http_client(GATEWAY_URL) as (
+        async with streamable_http_client(gateway_url) as (
             read_b, write_b, get_session_id_b
         ):
             async with ClientSession(read_b, write_b) as session_b:
@@ -84,15 +84,19 @@ async def run_concurrent_session_test():
                 session_b_id = get_session_id_b()
                 assert session_b_id is not None
 
-                async with streamable_http_client(GATEWAY_URL) as (
+                async with streamable_http_client(gateway_url) as (
                     read_a, write_a, get_session_id_a
                 ):
-                    async with ClientSession(read_a, write_a) as session_a:
+                    async with ClientSession(
+                        read_a, write_a
+                    ) as session_a:
                         await session_a.initialize()
 
                         session_a_id = get_session_id_a()
                         assert session_a_id is not None
-                        assert session_a_id != session_b_id
+                        assert session_a_id != session_b_id, (
+                            "Both MCP clients received the same session ID."
+                        )
 
                         # Both sessions read different documents concurrently.
                         read_a_result, read_b_result = await asyncio.gather(
@@ -127,7 +131,9 @@ async def run_concurrent_session_test():
                                 {
                                     "recipient": "teammate@example.com",
                                     "subject": "Meeting notes",
-                                    "body": "Please prepare the room for Monday.",
+                                    "body": (
+                                        "Please prepare the room for Monday."
+                                    ),
                                 },
                             ),
                         )

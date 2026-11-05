@@ -16,9 +16,14 @@ GATEWAY_PATH = (
     / "gateway.py"
 )
 
-GATEWAY_URL = "http://127.0.0.1:8001/mcp"
-
+HOST = "127.0.0.1"
 TEST_BODY = "Project status: development is 80% complete."
+
+
+def get_free_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((HOST, 0))
+        return sock.getsockname()[1]
 
 
 def get_response(result):
@@ -29,7 +34,7 @@ def get_response(result):
     )
 
 
-async def wait_for_gateway(process):
+async def wait_for_gateway(process, port):
     for _ in range(60):
         if process.poll() is not None:
             raise RuntimeError(
@@ -38,7 +43,7 @@ async def wait_for_gateway(process):
 
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection("127.0.0.1", 8001),
+                asyncio.open_connection(HOST, port),
                 timeout=1,
             )
             writer.close()
@@ -51,8 +56,12 @@ async def wait_for_gateway(process):
 
 
 async def run_cross_session_test():
+    port = get_free_port()
+    gateway_url = f"http://{HOST}:{port}/mcp"
+
     env = os.environ.copy()
     env["TAINTGATE_TRANSPORT"] = "streamable-http"
+    env["TAINTGATE_PORT"] = str(port)
 
     process = subprocess.Popen(
         [sys.executable, str(GATEWAY_PATH)],
@@ -62,9 +71,9 @@ async def run_cross_session_test():
     )
 
     try:
-        await wait_for_gateway(process)
+        await wait_for_gateway(process, port)
 
-        async with streamable_http_client(GATEWAY_URL) as (
+        async with streamable_http_client(gateway_url) as (
             read_a, write_a, get_session_id_a
         ):
             async with ClientSession(read_a, write_a) as session_a:
@@ -72,7 +81,7 @@ async def run_cross_session_test():
                 session_a_id = get_session_id_a()
                 assert session_a_id is not None
 
-                async with streamable_http_client(GATEWAY_URL) as (
+                async with streamable_http_client(gateway_url) as (
                     read_b, write_b, get_session_id_b
                 ):
                     async with ClientSession(read_b, write_b) as session_b:
@@ -81,8 +90,7 @@ async def run_cross_session_test():
                         assert session_b_id is not None
                         assert session_a_id != session_b_id, (
                             "Both MCP clients received the same session ID."
-                            )
-
+                        )
 
                         # Session A reads the untrusted document.
                         await session_a.call_tool(
